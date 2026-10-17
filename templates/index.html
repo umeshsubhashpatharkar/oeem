@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Next-Day OEE Prediction</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 13px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4f46e5;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #3730a3;
+        }
+
+        #result {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .prediction {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 600px) {
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 15px;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>Next-Day OEE Prediction</h1>
+
+    <div class="subtitle">
+        Enter the previous day's machine information
+    </div>
+
+
+    <form id="predictionForm">
+
+        <div class="form-grid">
+
+            <div>
+                <label>Machine Age</label>
+                <input type="number" id="Machine_Age" required>
+            </div>
+
+
+            <div>
+                <label>OEE Lag 1 (%)</label>
+                <input type="number" step="0.01" id="OEE_Lag_1" required>
+            </div>
+
+
+            <div>
+                <label>Available Hours</label>
+                <input type="number" step="0.01" id="Avail_Hrs_Lag_1" required>
+            </div>
+
+
+            <div>
+                <label>Machine Running Hours</label>
+                <input type="number" step="0.01" id="MC_Running_Hrs_Lag_1" required>
+            </div>
+
+
+            <div>
+                <label>Total Downtime</label>
+                <input type="number" step="0.01" id="Total_DT_Lag_1" required>
+            </div>
+
+
+            <div>
+                <label>Production Quantity</label>
+                <input type="number" id="Prod_Qty_Lag_1" required>
+            </div>
+
+
+            <div>
+                <label>Rejected Quantity</label>
+                <input type="number" id="Rej_Qty_Lag_1" required>
+            </div>
+
+
+            <div>
+                <label>Maintenance Flag</label>
+
+                <select id="Maintenance_Flag_Lag_1" required>
+
+                    <option value="0">0 - No Maintenance</option>
+
+                    <option value="1">1 - Maintenance</option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <button type="submit">
+            Predict Tomorrow's OEE
+        </button>
+
+    </form>
+
+
+    <div id="result"></div>
+
+</div>
+
+
+<script>
+
+document.getElementById("predictionForm").addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+
+    const result = document.getElementById("result");
+
+    result.style.display = "none";
+
+
+    const data = {
+
+        Machine_Age: Number(document.getElementById("Machine_Age").value),
+
+        OEE_Lag_1: Number(document.getElementById("OEE_Lag_1").value),
+
+        Avail_Hrs_Lag_1: Number(document.getElementById("Avail_Hrs_Lag_1").value),
+
+        MC_Running_Hrs_Lag_1: Number(document.getElementById("MC_Running_Hrs_Lag_1").value),
+
+        Total_DT_Lag_1: Number(document.getElementById("Total_DT_Lag_1").value),
+
+        Prod_Qty_Lag_1: Number(document.getElementById("Prod_Qty_Lag_1").value),
+
+        Rej_Qty_Lag_1: Number(document.getElementById("Rej_Qty_Lag_1").value),
+
+        Maintenance_Flag_Lag_1: Number(document.getElementById("Maintenance_Flag_Lag_1").value)
+
+    };
+
+
+    try {
+
+        const response = await fetch("/predict", {
+
+            method: "POST",
+
+            headers: {
+
+                "Content-Type": "application/json"
+
+            },
+
+            body: JSON.stringify(data)
+
+        });
+
+
+        const responseData = await response.json();
+
+
+        result.style.display = "block";
+
+
+        if (response.ok) {
+
+            result.className = "success";
+
+            result.innerHTML = `
+                <strong>Prediction Successful!</strong>
+
+                <div class="prediction">
+                    ${Number(responseData.predicted_oee).toFixed(2)}%
+                </div>
+
+                <div>
+                    Prediction saved to MySQL.
+                </div>
+            `;
+
+        } else {
+
+            result.className = "error";
+
+            result.innerHTML = `
+                <strong>${responseData.error}</strong>
+                <br>
+                ${responseData.message || ""}
+            `;
+
+        }
+
+    }
+
+    catch (error) {
+
+        result.style.display = "block";
+
+        result.className = "error";
+
+        result.innerHTML = `
+            <strong>Connection Error</strong>
+            <br>
+            Could not connect to the Flask server.
+        `;
+
+    }
+
+});
+
+</script>
+
+</body>
+
+</html>
